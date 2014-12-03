@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+#include "chat.h"
 
 char buf[BUFSIZ]= {0};
 static int flag = 1;
@@ -23,6 +24,10 @@ void SigProc(int sig)
     if (sig == SIGUSR1) {
         printf("Cautch SIGUSR1.\n");
     }
+
+    if (sig == SIGPIPE) {
+        printf("Cautch SIGPIPE.\n");
+    }
     flag = 0;
 }
 
@@ -31,8 +36,24 @@ int main(int argc, char *argv[])
     int sock;
     struct sockaddr_in serv, cli;
     int r_bytes;
+    char ch;
+    unsigned short port;
 
     signal(SIGUSR1, SigProc);
+    signal(SIGPIPE, SigProc);
+
+    while ((ch = getopt(argc, argv, "p:")) != -1) {
+        switch (ch) {
+            case 'p':
+                port = atoi(optarg);
+                break;
+
+            default:
+                printf("Must assign port number\n");
+                return -1;
+        }
+    }
+    //exit(EXIT_FAILURE);
 
     bzero(&serv, sizeof(serv));
     serv.sin_family = AF_INET;
@@ -41,7 +62,7 @@ int main(int argc, char *argv[])
 
     bzero(&cli, sizeof(serv));
     cli.sin_family = AF_INET;
-    cli.sin_port = htons(30000);
+    cli.sin_port = htons(port);
     cli.sin_addr.s_addr = INADDR_ANY;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
